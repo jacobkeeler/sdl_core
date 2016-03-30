@@ -60,40 +60,64 @@ namespace transport_adapter {
 CREATE_LOGGERPTR_GLOBAL(logger_, "TransportManager")
 
 namespace {
-char* SplitToAddr(char* dev_list_entry) {
-  char* bl_address = strtok(dev_list_entry, "()");
-  if (bl_address != NULL) {
-    bl_address = strtok(NULL, "()");
-    return bl_address;
-  } else {
-    return NULL;
+int ValidateAddr(char* dev_list_entry) {
+  const int BT_ADDRESS_LENGTH = 17;
+  if (strlen(dev_list_entry) == BT_ADDRESS_LENGTH) {
+    for (int i = 0; i < BT_ADDRESS_LENGTH; i++) {
+      if (i % 3 < 2 && !isxdigit(dev_list_entry[i])) {
+        return false;
+      }
+      else if (i % 3 == 2 && dev_list_entry[i] != ':') {
+        return false;
+      }
+    }
+    return true;
+  }
+  else {
+    return false;
   }
 }
 
 int FindPairedDevs(std::vector<bdaddr_t>* result) {
-  LOG4CXX_TRACE(logger_, "enter. result adress: " << result);
+  LOG4CXX_TRACE(logger_, "enter. result address: " << result);
   DCHECK(result != NULL);
 
-  const char* cmd = "bt-device -l";
+  const int device_id = hci_get_route(0);
+  if (device_id < 0) {
+    LOG4CXX_INFO(logger_, "HCI device is not available");
+    return -1;
+  }
+
+  bdaddr_t address;
+  int ret = hci_devba(device_id, &address);
+  if (ret != 0) {
+    LOG4CXX_ERROR(logger_, "Unable to get the address of the default bluetooth controller");
+    return -1;
+  }
+
+  const int BT_ADDRESS_LENGTH = 17;
+  char controller_address[BT_ADDRESS_LENGTH];
+  ba2str(&address, controller_address);
+
+  char cmd[1024];
+  sprintf(cmd, "ls /var/lib/bluetooth/%s", controller_address);
 
   FILE* pipe = popen(cmd, "r");
   if (!pipe) {
     LOG4CXX_TRACE(logger_, "exit -1. Condition: !pipe");
     return -1;
   }
-  char* buffer = new char[1028];
-  size_t counter = 0;
-  while (fgets(buffer, 1028, pipe) != NULL) {
-    if (0 < counter++) {  //  skip first line
-      char* bt_address = SplitToAddr(buffer);
-      if (bt_address) {
-        bdaddr_t address;
-        str2ba(bt_address, &address);
-        result->push_back(address);
+  char* buffer = new char[1024];
+  while (fgets(buffer, 1024, pipe) != NULL) {
+      char* bt_address = strtok(buffer, " \n");
+      while (bt_address != NULL) {
+        if (ValidateAddr(bt_address)) {
+          LOG4CXX_DEBUG(logger_, "Found paired device: " << bt_address);
+          str2ba(bt_address, &address);
+          result->push_back(address);
+        }
+        bt_address = strtok(NULL, " \n"); 
       }
-    }
-    delete [] buffer;
-    buffer = new char[1028];
   }
   pclose(pipe);
   LOG4CXX_TRACE(logger_, "exit with 0");
