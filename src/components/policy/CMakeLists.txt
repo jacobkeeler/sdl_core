@@ -101,7 +101,7 @@ add_custom_target(copy_library_${target} ALL
 install(TARGETS ${target}
   DESTINATION ${install_destination}
   PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE
-    GROUP_READ GROUP_EXECUTE
+    GROUP_READ GROUP_WRITE GROUP_EXECUTE
     WORLD_READ WORLD_EXECUTE
 )
 
