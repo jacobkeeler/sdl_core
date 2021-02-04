@@ -311,6 +311,7 @@ const char* engine_oil_life = "engineOilLife";
 const char* oem_custom_data_type = "oemCustomDataType";
 const char* window_status = "windowStatus";
 const char* hands_off_steering = "handsOffSteering";
+const char* seat_occupancy = "seatOccupancy";
 
 // app services
 const char* app_service_manifest = "appServiceManifest";
@@ -446,6 +447,7 @@ const char* const haptic_rect_data = "hapticRectData";
 const char* const rect = "rect";
 const char* const x = "x";
 const char* const y = "y";
+const char* const preferred_fps = "preferredFPS";
 }  // namespace strings
 
 namespace hmi_interface {
